@@ -95,6 +95,8 @@ Colours come from `light-dark()` pairs on one set of tokens, so `color-scheme`
 is the only thing the control changes: no second palette block to drift out of
 step, and no JavaScript involved in the switch itself.
 
+![The same page in dark mode](docs/screenshot-dark.png)
+
 The languages are named in their own language and each label carries its own
 `lang`, so a screen reader pronounces "Bahasa Indonesia" in Indonesian. No flags:
 a flag is a country, and a language is not. First visit follows
