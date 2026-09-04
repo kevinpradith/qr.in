@@ -7,6 +7,8 @@
 A QR code from any text or link, generated in the browser. No upload, no request,
 no build step: open `index.html` and it works, including from a `file://` path.
 
+**[Try it](https://kevinpradith.github.io/qr.in/)**
+
 ![The page in light mode: text on the left, the QR code on the right](docs/screenshot-light.png)
 
 - Error correction L / M / Q / H
