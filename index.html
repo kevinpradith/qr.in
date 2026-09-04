@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>qr.in</title>
+    <meta
+      name="description"
+      content="Make a QR code from any text or link. Your browser draws it, and there is no server behind it."
+    />
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%231b1b1b'/%3E%3Cpath d='M4 4h3v3H4zM9 4h3v3H9zM4 9h3v3H4zM9 9h1v1H9zM11 9h1v1h-1zM10 10h1v1h-1zM9 11h1v1H9zM11 11h1v1h-1z' fill='white'/%3E%3C/svg%3E"
+    />
+
+    <!--
+      Both of the saved preferences have to be on the root element before the
+      first paint, or the page shows light-then-dark, or English-then-Indonesian,
+      on every load. That means a blocking script here rather than anything in
+      app.js, and a try, because storage throws outright in some privacy modes.
+    -->
+    <script>
+      try {
+        const theme = localStorage.getItem('qr.in:theme')
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
+        const saved = localStorage.getItem('qr.in:lang')
+        document.documentElement.lang =
+          saved === 'id' || saved === 'en'
+            ? saved
+            : (navigator.language || 'en').toLowerCase().startsWith('id')
+              ? 'id'
+              : 'en'
+      } catch {}
+    </script>
+
+    <style>
+      /*
+        Spacing comes from one ratio, φ = 1.618, so no gap on the page is a
+        number somebody liked the look of: 0.236 0.382 0.618 1 1.618 2.618 4.236
+        6.854. The surface treatment is macOS: San Francisco through the system
+        font stack, controls on white cards over a grey desktop, and one accent
+        colour, used only for focus and for the primary action.
+
+        Both palettes live in the light-dark() pairs below, so there is one
+        declaration per colour rather than a second block that drifts out of
+        step. Which half is used follows color-scheme, and that is all the theme
+        control has to change.
+      */
+      :root {
+        color-scheme: light dark;
+
+        --phi-1: 0.236rem;
+        --phi-2: 0.382rem;
+        --phi-3: 0.618rem;
+        --phi-4: 1rem;
+        --phi-5: 1.618rem;
+        --phi-6: 2.618rem;
+        --phi-7: 4.236rem;
+        --phi-8: 6.854rem;
+
+        /*
+          Two ladders, because the page is half prose and half control panel.
+          Prose runs 16 → 25.9 → 41.9px, which is 1rem stepped by φ twice, so the
+          headline sizes come off the same ratio as the spacing. Controls run at
+          the macOS pair instead: 15px for anything you type or press, 13px for
+          the labels beside them, which is what AppKit itself uses.
+        */
+        --text-caption: 0.8125rem;
+        --text-ui: 0.9375rem;
+        --text-body: 1rem;
+        --text-title: 1.618rem;
+        --text-display: 2.618rem;
+
+        --radius-card: 12px;
+        --radius-control: 7px;
+
+        --bg: light-dark(#f5f5f7, #1c1c1e);
+        --surface: light-dark(#ffffff, #2c2c2e);
+        --surface-sunken: light-dark(#f0f0f2, #242426);
+        --ink: light-dark(#1d1d1f, #f5f5f7);
+        --muted: light-dark(#6e6e73, #98989d);
+
+        /* A hairline is enough to draw a card, but the edge of something you can
+           type in is the only thing marking where it is, and WCAG 1.4.11 asks
+           that edge for 3:1 against what is behind it. This grey is 3.6:1 on
+           white and 3.9:1 on the dark card; Apple's own hairline is 1.4:1. */
+        --line: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.12));
+        --line-control: #86868b;
+
+        /* Two blues, and which one is used depends on what it has to be seen
+           against: --accent is a fill with white text on it, --accent-text is
+           the hue tuned to be read, or drawn as a line, on the page itself.
+           White on Apple's #0a84ff is 3.65:1, under what a button label needs. */
+        --accent: light-dark(#0068d1, #0b6fd6);
+        --accent-text: light-dark(#0068d1, #0a84ff);
+        --accent-ring: light-dark(rgba(0, 104, 209, 0.32), rgba(10, 132, 255, 0.45));
+        --danger: light-dark(#c1121f, #ff6961);
+
+        /* light-dark() takes colours, not whole shadows, so the two shadow
+           colours switch and the geometry stays put. */
+        --shadow-near: light-dark(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.4));
+        --shadow-far: light-dark(rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.32));
+        --shadow-card: 0 1px 2px var(--shadow-near), 0 8px 24px var(--shadow-far);
+        --shadow-control: 0 1px 1px rgba(0, 0, 0, 0.06);
+        --shadow-knob: 0 1px 3px rgba(0, 0, 0, 0.24), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+      }
+
+      /* The theme control writes one of these onto the root element; with
+         neither, the page follows the system. */
+      :root[data-theme="light"] { color-scheme: light; }
+      :root[data-theme="dark"] { color-scheme: dark; }
+
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+
+      body {
+        margin: 0;
+        padding: clamp(var(--phi-5), 6vw, var(--phi-7)) clamp(var(--phi-4), 4vw, var(--phi-5))
+          clamp(var(--phi-6), 8vw, var(--phi-8));
+        background: var(--bg);
+        color: var(--ink);
+        font: var(--text-body) / 1.618 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+          system-ui, "Helvetica Neue", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      main { max-width: 62rem; margin: 0 auto; }
+
+      /* Title and preferences are two fixed columns, not a flex row that
+         rewraps: the Indonesian strapline is longer than the English one, and a
+         wrapping header would move the controls every time the language
+         changed. */
+      header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: var(--phi-4) var(--phi-5);
+        align-items: start;
+        margin-bottom: var(--phi-6);
+      }
+
+      h1 {
+        font-size: clamp(var(--text-title), 6vw, var(--text-display));
+        line-height: 1.08;
+        letter-spacing: -0.022em;
+        font-weight: 600;
+        margin: 0 0 var(--phi-2);
+      }
+
+      .lede {
+        margin: 0;
+        color: var(--muted);
+        /* Bringhurst's measure: 45-75 characters, 66 the usual target. */
+        max-width: 55ch;
+        letter-spacing: -0.01em;
+        text-wrap: balance;
+      }
+
+      /*
+        The two preference controls, kept out of the form: they change the page,
+        not the QR code. Compact, because they are chrome, and on φ widths that
+        hold the longest label in either language, so nothing on this page moves
+        when the language changes: 4.236rem a segment fits "Otomatis", and the
+        language codes fit 2.618rem with room to spare.
+      */
+      .prefs { display: flex; flex-wrap: wrap; gap: var(--phi-4); justify-content: end; }
+      .prefs .field { gap: var(--phi-1); }
+      .prefs .segmented { min-height: var(--phi-5); }
+      .prefs .segmented label { font-size: var(--text-caption); padding: 0 var(--phi-2); }
+      #themeSeg { grid-auto-columns: var(--phi-7); }
+      #langSeg { grid-auto-columns: var(--phi-6); }
+
+      /* Two columns in the same 1.618 : 1 as the spacing, for as long as the
+         preview can stay legible beside the controls. */
+      .layout {
+        display: grid;
+        gap: clamp(var(--phi-5), 3vw, var(--phi-6));
+        grid-template-columns: minmax(0, 1.618fr) minmax(15rem, 1fr);
+        align-items: start;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+      }
+
+      .controls { display: grid; gap: var(--phi-5); padding: var(--phi-5); }
+      .field { display: grid; gap: var(--phi-2); }
+
+      label, .label {
+        font-size: var(--text-caption);
+        font-weight: 500;
+        color: var(--muted);
+        letter-spacing: -0.005em;
+      }
+
+      .hint { font-size: var(--text-caption); color: var(--muted); }
+      .label-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--phi-4); }
+      output { font-size: var(--text-caption); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+      textarea, input[type="number"] {
+        font: inherit;
+        font-size: var(--text-ui);
+        color: inherit;
+        background: var(--surface);
+        border: 1px solid var(--line-control);
+        border-radius: var(--radius-control);
+        padding: var(--phi-3) var(--phi-4);
+        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.03);
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: var(--phi-8);
+        resize: vertical;
+        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+        font-size: var(--text-caption);
+        line-height: 1.55;
+      }
+
+      input[type="number"] { min-height: var(--phi-6); }
+      textarea:hover, input[type="number"]:hover { border-color: var(--ink); }
+
+      textarea:focus, input[type="number"]:focus {
+        outline: none;
+        border-color: var(--accent-text);
+        box-shadow: 0 0 0 3px var(--accent-ring);
+      }
+
+      :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+      textarea:focus-visible, input[type="number"]:focus-visible { outline: none; }
+
+      .row {
+        display: grid;
+        gap: var(--phi-4);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+      }
+
+      /*
+        A segmented control, the way a small set of choices is picked everywhere
+        else on this platform: radios, the labels drawn as one pill, and the
+        selected one lifted onto a white slug. Three of them on the page now, so
+        it is worth the one component.
+      */
+      .segmented {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        gap: 2px;
+        padding: 2px;
+        background: var(--surface-sunken);
+        border: 1px solid var(--line-control);
+        border-radius: var(--radius-control);
+        min-height: var(--phi-6);
+      }
+
+      .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+
+      .segmented label {
+        display: grid;
+        place-items: center;
+        white-space: nowrap;
+        border-radius: calc(var(--radius-control) - 2px);
+        padding: var(--phi-2) var(--phi-3);
+        font-size: var(--text-ui);
+        font-weight: 500;
+        color: var(--ink);
+        cursor: pointer;
+        transition: background-color 150ms ease, box-shadow 150ms ease;
+        /* The divider between two unselected segments, macOS style. */
+        box-shadow: inset -1px 0 0 var(--line);
+      }
+
+      .segmented label:last-of-type { box-shadow: none; }
+
+      .segmented input:checked + label {
+        background: var(--surface);
+        box-shadow: var(--shadow-control), 0 0 0 0.5px var(--line-control);
+      }
+
+      .segmented input:focus-visible + label { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+
+      /* The bar is 4px, but the thing you have to hit is the whole 42px box:
+         WCAG 2.5.8 asks for 24px of target and a knob alone is 20. */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: var(--phi-6);
+        background: none;
+        border: 0;
+        padding: 0;
+        margin: 0;
+      }
+
+      input[type="range"]::-webkit-slider-runnable-track {
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(var(--accent-text), var(--accent-text)) 0 / var(--fill, 50%) 100%
+            no-repeat,
+          var(--surface-sunken);
+        box-shadow: inset 0 0 0 1px var(--line-control);
+      }
+
+      input[type="range"]::-moz-range-track {
+        height: 4px;
+        border-radius: 2px;
+        background: var(--surface-sunken);
+        box-shadow: inset 0 0 0 1px var(--line-control);
+      }
+
+      input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent-text); }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        margin-top: -8px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: var(--shadow-knob);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border: 0;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: var(--shadow-knob);
+      }
+
+      .swatches { display: flex; gap: var(--phi-4); }
+      .swatch { display: grid; gap: var(--phi-2); }
+      .swatch label { font-weight: 400; }
+
+      input[type="color"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: var(--phi-7);
+        height: var(--phi-6);
+        padding: 0;
+        border: 1px solid var(--line-control);
+        border-radius: var(--radius-control);
+        background: none;
+        box-shadow: var(--shadow-control);
+        cursor: pointer;
+      }
+
+      input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+      input[type="color"]::-webkit-color-swatch { border: 1px solid var(--line); border-radius: 4px; }
+      input[type="color"]::-moz-color-swatch { border: 1px solid var(--line); border-radius: 4px; }
+
+      /* Two lines reserved: the message wraps to two at every width below about
+         700px, and in Indonesian at around 900px. One line let it push the
+         preview down the moment the text stopped fitting. */
+      #error { margin: 0; min-height: 3.236em; color: var(--danger); font-size: var(--text-caption); }
+
+      .preview {
+        position: sticky;
+        top: var(--phi-5);
+        padding: var(--phi-5);
+        display: grid;
+        gap: var(--phi-4);
+        justify-items: center;
+      }
+
+      /* A fixed square, so changing the level or the text length moves nothing
+         on the page. The download keeps the slider's pixel size; this is only
+         how large it is on screen. */
+      .frame {
+        width: 100%;
+        max-width: 20rem;
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        background: var(--surface-sunken);
+        border-radius: calc(var(--radius-card) - 4px);
+      }
+
+      canvas {
+        max-width: 88%;
+        max-height: 88%;
+        height: auto;
+        image-rendering: pixelated;
+        border-radius: 3px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      }
+
+      /* The line grows from "25x25 modules" to "177x177 modules" as the text
+         does; the height is reserved so it cannot push the buttons down. */
+      .meta {
+        margin: 0;
+        min-height: 1.618em;
+        font-size: var(--text-caption);
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .actions { display: grid; gap: var(--phi-3); width: 100%; }
+      .split { display: grid; grid-template-columns: 1fr 1fr; gap: var(--phi-3); }
+      .split button { min-height: var(--phi-5); padding: 0 var(--phi-4); font-size: var(--text-caption); }
+
+      button {
+        font: inherit;
+        font-size: var(--text-ui);
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        min-height: var(--phi-6);
+        padding: var(--phi-2) var(--phi-5);
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        background: var(--accent);
+        color: #fff;
+        box-shadow: var(--shadow-control);
+        cursor: pointer;
+        transition: filter 150ms ease, background-color 150ms ease;
+      }
+
+      button.ghost { background: var(--surface); color: var(--ink); border-color: var(--line-control); }
+      button:hover:not(:disabled) { filter: brightness(1.06); }
+      button.ghost:hover:not(:disabled) { background: var(--surface-sunken); filter: none; }
+      button:active:not(:disabled) { filter: brightness(0.94); }
+      button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      footer {
+        max-width: 66ch;
+        margin: clamp(var(--phi-6), 8vw, var(--phi-7)) auto 0;
+        color: var(--muted);
+        font-size: var(--text-caption);
+        text-align: center;
+      }
+
+      footer a { color: var(--accent-text); text-decoration: none; }
+      footer a:hover { text-decoration: underline; }
+      code { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+
+      /*
+        One breakpoint, at 44rem: below it the preview column can no longer hold
+        a legible QR beside the controls, so the two stack. Laptops and both
+        tablet orientations stay side by side; the widths in between are handled
+        by the fr split and the clamps rather than by more breakpoints.
+      */
+      @media (max-width: 44rem) {
+        .layout { grid-template-columns: minmax(0, 1fr); }
+        .preview { position: static; }
+        .frame { max-width: min(18rem, 62vw); }
+        textarea { min-height: var(--phi-7); }
+        header { grid-template-columns: minmax(0, 1fr); }
+        .prefs { justify-content: start; }
+      }
+
+      /* A phone held sideways has no vertical room to spare, so the strapline
+         goes: it is the one thing here that is only there to be read. */
+      @media (max-height: 30rem) and (orientation: landscape) {
+        body { padding-top: var(--phi-4); }
+        header { margin-bottom: var(--phi-4); }
+        .lede { display: none; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>qr.in</h1>
+          <p class="lede" data-i18n="lede"></p>
+        </div>
+
+        <div class="prefs">
+          <div class="field">
+            <span class="label" id="themeLabel" data-i18n="appearance"></span>
+            <div class="segmented" id="themeSeg" role="radiogroup" aria-labelledby="themeLabel">
+              <input type="radio" name="theme" id="theme-auto" value="auto" checked />
+              <label for="theme-auto" data-i18n="auto"></label>
+              <input type="radio" name="theme" id="theme-light" value="light" />
+              <label for="theme-light" data-i18n="themeLight"></label>
+              <input type="radio" name="theme" id="theme-dark" value="dark" />
+              <label for="theme-dark" data-i18n="themeDark"></label>
+            </div>
+          </div>
+
+          <!--
+            ISO codes on the face of the control, because the pair has to be
+            narrow and has to be the same width in both languages; the full name
+            is on aria-label and title, each carrying the lang it names, so a
+            screen reader says "Bahasa Indonesia" in Indonesian rather than
+            reading it in English. No flags: a flag is a country, and neither of
+            these languages belongs to one country.
+          -->
+          <div class="field">
+            <span class="label" id="langLabel" data-i18n="language"></span>
+            <div class="segmented" id="langSeg" role="radiogroup" aria-labelledby="langLabel">
+              <input type="radio" name="lang" id="lang-en" value="en" checked />
+              <label for="lang-en" lang="en" aria-label="English" title="English">EN</label>
+              <input type="radio" name="lang" id="lang-id" value="id" />
+              <label for="lang-id" lang="id" aria-label="Bahasa Indonesia" title="Bahasa Indonesia">ID</label>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <section class="card controls">
+          <div class="field">
+            <span class="label-row">
+              <label for="text" data-i18n="textLabel"></label>
+              <output id="len" for="text"></output>
+            </span>
+            <textarea id="text" spellcheck="false" autocapitalize="off">https://example.com</textarea>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <span class="label-row">
+                <span class="label" id="ecLabel" data-i18n="ecLabel"></span>
+                <output id="ecOut"></output>
+              </span>
+              <div class="segmented" role="radiogroup" aria-labelledby="ecLabel">
+                <input type="radio" name="ec" id="ec-L" value="L" />
+                <label for="ec-L">L</label>
+                <input type="radio" name="ec" id="ec-M" value="M" checked />
+                <label for="ec-M">M</label>
+                <input type="radio" name="ec" id="ec-Q" value="Q" />
+                <label for="ec-Q">Q</label>
+                <input type="radio" name="ec" id="ec-H" value="H" />
+                <label for="ec-H">H</label>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="label-row">
+                <label for="size" data-i18n="sizeLabel"></label>
+                <output id="sizeOut" for="size"></output>
+              </span>
+              <input id="size" type="range" min="128" max="2048" step="32" value="512" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <span class="label" data-i18n="colours"></span>
+              <div class="swatches">
+                <span class="swatch">
+                  <label for="fg" data-i18n="colourDark"></label>
+                  <input id="fg" type="color" value="#000000" />
+                </span>
+                <span class="swatch">
+                  <label for="bg" data-i18n="colourLight"></label>
+                  <input id="bg" type="color" value="#ffffff" />
+                </span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="quiet" data-i18n="quietLabel"></label>
+              <input id="quiet" type="number" min="0" max="16" value="4" />
+              <span class="hint" data-i18n="quietHint"></span>
+            </div>
+          </div>
+
+          <p id="error" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="card preview" aria-label="Preview">
+          <div class="frame">
+            <canvas id="canvas" width="512" height="512" aria-label="QR code preview"></canvas>
+          </div>
+          <p class="meta" id="meta"></p>
+          <div class="actions">
+            <button id="png" data-i18n="downloadPng"></button>
+            <div class="split">
+              <button id="svg" class="ghost">SVG</button>
+              <button id="copy" class="ghost" data-i18n="copy"></button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <span data-i18n="footer"></span>
+      <a href="https://github.com/kazuhikoarase/qrcode-generator">qrcode-generator</a> (MIT).
+    </footer>
+
+    <script src="./qrcode.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
