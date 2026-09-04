@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security issue
+    url: https://github.com/kevinpradith/qr.in/security/policy
+    about: Please report vulnerabilities privately rather than in a public issue.
+  - name: Question
+    url: https://github.com/kevinpradith/qr.in/discussions
+    about: Ask about how something works.

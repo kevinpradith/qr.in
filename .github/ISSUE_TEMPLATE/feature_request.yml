@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest something the page should do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The project stays buildless, dependency-free and offline. A suggestion
+        that needs a server, a package manager or a network call at runtime will
+        be closed, however good it is.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The problem, not the solution. What are you using a QR code for?
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This works without a build step or a package manager
+          required: true
+        - label: This works offline, with no request at runtime
+          required: true

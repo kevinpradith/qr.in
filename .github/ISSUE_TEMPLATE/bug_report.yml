@@ -1,0 +1,60 @@
+name: Bug report
+description: Something on the page behaves wrong, or a generated code does not scan
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: qr.in has no server, no build step and makes no request at
+        runtime, so anything about an API, an account or an upload is out of scope.
+        For a security issue, please use the [security policy](https://github.com/kevinpradith/qr.in/security/policy) instead of a public issue.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the page
+        2. Type ...
+        3. Set error correction to ...
+    validations:
+      required: true
+
+  - type: input
+    id: text
+    attributes:
+      label: The text you encoded
+      description: The exact input, if the problem is with the code that came out. Leave it blank if it is private.
+
+  - type: dropdown
+    id: opened
+    attributes:
+      label: How the page was opened
+      options:
+        - From disk (file://)
+        - Over HTTP (a local server or a host)
+        - The hosted copy at kevinpradith.github.io/qr.in
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Firefox 141, Safari 18.2, Chrome 130
+    validations:
+      required: true
+
+  - type: input
+    id: scanner
+    attributes:
+      label: Scanner, if the code did not scan
+      placeholder: iOS camera, Google Lens, a supermarket scanner
