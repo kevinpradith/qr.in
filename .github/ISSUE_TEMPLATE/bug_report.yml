@@ -41,7 +41,7 @@ body:
       options:
         - From disk (file://)
         - Over HTTP (a local server or a host)
-        - The hosted copy at kevinpradith.github.io/qr.in
+        - The hosted copy at qr-in.kevinpradith.my.id
     validations:
       required: true
 

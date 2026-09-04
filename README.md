@@ -7,7 +7,7 @@
 A QR code from any text or link, generated in the browser. No upload, no request,
 no build step: open `index.html` and it works, including from a `file://` path.
 
-**[Try it](https://kevinpradith.github.io/qr.in/)**
+**[qr-in.kevinpradith.my.id](https://qr-in.kevinpradith.my.id/)**
 
 ![The page in light mode: text on the left, the QR code on the right](docs/screenshot-light.png)
 
@@ -156,7 +156,11 @@ blue used only for focus and the primary action.
 ## Hosting
 
 Static files. Any static host, or none at all: the page is designed to be opened
-from disk, and nothing on it needs an origin.
+from disk, and nothing on it needs an origin. There is no build command and no
+output directory to configure, so a host that insists on a framework wants
+"other", an empty build step, and the repository root.
+
+The hosted copy is at <https://qr-in.kevinpradith.my.id/>, on Vercel.
 
 ## Privacy
 
