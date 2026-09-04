@@ -1,0 +1,3 @@
+# The working copy lives on a Windows drive; the repository stays LF.
+* text=auto eol=lf
+*.png binary
