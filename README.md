@@ -168,7 +168,29 @@ from disk, and nothing on it needs an origin. There is no build command and no
 output directory to configure, so a host that insists on a framework wants
 "other", an empty build step, and the repository root.
 
-The hosted copy is at <https://qr-in.kevinpradith.my.id/>, on Vercel.
+The hosted copy is at <https://qr-in.kevinpradith.my.id/>, on Vercel, and
+`vercel.json` sets the response headers that turn "nothing leaves this page"
+from a claim into something the browser enforces:
+
+    default-src 'none'; script-src 'self' 'sha256-...'; style-src 'sha256-...';
+    img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+`connect-src` is absent, so every fetch, XHR and WebSocket is refused: if a
+change ever made the page phone home it would fail loudly, rather than quietly
+sending someone's text somewhere. The two hashes cover the inline stylesheet and
+the inline preferences script, and nothing else inline may run, so an injected
+`<script>` does not execute either.
+
+A hash is a thing that goes stale silently: edit the stylesheet, forget the
+header, and the live page loses every style while working perfectly on disk. So
+`test.js` recomputes both hashes from `index.html` and fails if `vercel.json`
+disagrees, printing the ones it should hold. GitHub Pages cannot set a header at
+all, so none of this was possible until the site moved to its own domain.
+
+Verified by serving the page locally with those exact headers: it renders and
+encodes normally with zero violations and the download anchor still works, while
+a cross-origin fetch, a CDN script, an external image, a Google Fonts stylesheet
+and an injected inline script are all refused.
 
 ## Privacy
 

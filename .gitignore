@@ -1,6 +1,5 @@
-# Headless measurement and screenshot scratch files
-_*.html
-_*.png
+# Headless measurement, probe and screenshot scratch files
+_*
 
 # OS and editor noise
 .DS_Store

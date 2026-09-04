@@ -167,6 +167,26 @@ for (const id of ['themeSeg', 'langSeg']) {
 assert.match(css, /#error \{ margin: 0; min-height: 3\.236em;/,
   '#error must reserve two lines, or showing it shifts the layout')
 
+// The content security policy in vercel.json pins the two inline blocks by
+// hash. A hash goes stale silently: edit the stylesheet, forget the header, and
+// the deployed page loses every style while the copy on disk looks perfect. So
+// the hashes are recomputed here from the file that is actually shipped.
+const crypto = require('node:crypto')
+const sha256 = (text) => `sha256-${crypto.createHash('sha256').update(text).digest('base64')}`
+const inline = (tag) => read('index.html').match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))[1]
+const policy = JSON.parse(read('vercel.json')).headers[0].headers
+  .find((h) => h.key === 'Content-Security-Policy').value
+
+for (const [tag, directive] of [['script', 'script-src'], ['style', 'style-src']]) {
+  const want = sha256(inline(tag))
+  assert.ok(policy.includes(`'${want}'`),
+    `${directive} in vercel.json does not match the inline <${tag}>; it should hold '${want}'`)
+}
+
+// The point of the policy is the directive that is not there.
+assert.ok(!/connect-src/.test(policy), 'connect-src must stay absent, so no fetch is allowed at all')
+assert.match(policy, /default-src 'none'/)
+
 const channel = (c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
 const luminance = (hex) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
