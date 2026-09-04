@@ -23,7 +23,8 @@ no build step: open `index.html` and it works, including from a `file://` path.
 
 ## Run it
 
-Clone it, or download the four files, and open the page:
+Clone it, or download the source, and open the page. `index.html`, `app.js` and
+`qrcode.js` are all it needs:
 
 ```sh
 git clone https://github.com/kevinpradith/qr.in.git
@@ -166,11 +167,8 @@ else is stored anywhere.
 
 ## Contributing
 
-Issues and pull requests are welcome. Keep `node test.js` green, keep the page
-buildless, and read the design notes above before changing a spacing value or a
-colour: both are generated from a single scale, and a one-off number is the thing
-this repository is trying not to accumulate. Commit messages follow
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+what to keep in mind, and the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Licence
 
