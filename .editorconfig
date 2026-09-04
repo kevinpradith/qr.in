@@ -10,3 +10,9 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Vendored verbatim from the upstream build. An editor must not reformat it or
+# add the final newline it does not have, or the copy stops matching upstream.
+[qrcode.js]
+insert_final_newline = false
+trim_trailing_whitespace = false
