@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-04
+
+### Fixed
+
+- The page scrolled on every laptop. Vertical space was keyed to the viewport's
+  width, so a 1920px screen was given 288px of outer margin around 639px of
+  content and the footer sat below the fold. Vertical space follows the
+  viewport's height now, and the preview square and the gaps in both cards give
+  way before a scrollbar appears. 1920x1080, 1600x900, 1440x900, 1366x768,
+  1280x800 and 1024x768 all fit without scrolling.
+
+### Added
+
+- `vercel.json`: a content security policy with no `connect-src`, so the
+  browser refuses every fetch, XHR and WebSocket rather than the page merely
+  not making one. The two inline blocks are pinned by hash, and `test.js` fails
+  if a hash goes stale. `nosniff`, `no-referrer`, a permissions policy and both
+  cross-origin policies come with it.
+- Contributing guidelines, a code of conduct, issue forms and a pull request
+  checklist.
+
+### Changed
+
+- The site is served from <https://qr-in.kevinpradith.my.id/>. GitHub Pages is
+  switched off, and with it the Jekyll opt-out it needed.
+- `qrcode.js` is marked vendored and excluded from the editor config, so the
+  copy stays identical to the upstream build.
+
 ## [1.0.0] - 2026-09-04
 
 First public release.
@@ -30,4 +58,5 @@ First public release.
 - The error message reserved one line and wraps to two below about 700px, so
   showing it pushed the preview down.
 
+[1.0.1]: https://github.com/kevinpradith/qr.in/releases/tag/v1.0.1
 [1.0.0]: https://github.com/kevinpradith/qr.in/releases/tag/v1.0.0
