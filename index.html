@@ -117,8 +117,12 @@
 
       body {
         margin: 0;
-        padding: clamp(var(--phi-5), 6vw, var(--phi-7)) clamp(var(--phi-4), 4vw, var(--phi-5))
-          clamp(var(--phi-6), 8vw, var(--phi-8));
+        /* Vertical space is keyed to the viewport's height, horizontal space to
+           its width. Both used to come off 6vw and 8vw, so a wide monitor was
+           given 288px of outer margin for 639px of content and the footer fell
+           off the bottom of a laptop. The φ values are still the bounds. */
+        padding: clamp(var(--phi-4), 3vh, var(--phi-6)) clamp(var(--phi-4), 4vw, var(--phi-5))
+          clamp(var(--phi-5), 4vh, var(--phi-7));
         background: var(--bg);
         color: var(--ink);
         font: var(--text-body) / 1.618 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
@@ -138,7 +142,7 @@
         grid-template-columns: minmax(0, 1fr) auto;
         gap: var(--phi-4) var(--phi-5);
         align-items: start;
-        margin-bottom: var(--phi-6);
+        margin-bottom: clamp(var(--phi-4), 3vh, var(--phi-6));
       }
 
       h1 {
@@ -188,7 +192,9 @@
         box-shadow: var(--shadow-card);
       }
 
-      .controls { display: grid; gap: var(--phi-5); padding: var(--phi-5); }
+      /* The gaps between the groups close up before anything else does: on a
+         short screen a smaller gap is cheaper than a scrollbar. */
+      .controls { display: grid; gap: clamp(var(--phi-3), 2.4vh, var(--phi-5)); padding: var(--phi-5); }
       .field { display: grid; gap: var(--phi-2); }
 
       label, .label {
@@ -216,7 +222,7 @@
 
       textarea {
         width: 100%;
-        min-height: var(--phi-8);
+        min-height: min(var(--phi-8), 13vh);
         resize: vertical;
         font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
         font-size: var(--text-caption);
@@ -366,7 +372,7 @@
         top: var(--phi-5);
         padding: var(--phi-5);
         display: grid;
-        gap: var(--phi-4);
+        gap: clamp(var(--phi-3), 2vh, var(--phi-4));
         justify-items: center;
       }
 
@@ -375,7 +381,9 @@
          how large it is on screen. */
       .frame {
         width: 100%;
-        max-width: 20rem;
+        /* Bounded by height as well as width, so the square shrinks on a short
+           screen instead of pushing the page past the bottom of it. */
+        max-width: min(20rem, 38vh);
         aspect-ratio: 1;
         display: grid;
         place-items: center;
@@ -429,7 +437,7 @@
 
       footer {
         max-width: 66ch;
-        margin: clamp(var(--phi-6), 8vw, var(--phi-7)) auto 0;
+        margin: clamp(var(--phi-4), 3vh, var(--phi-6)) auto 0;
         color: var(--muted);
         font-size: var(--text-caption);
         text-align: center;

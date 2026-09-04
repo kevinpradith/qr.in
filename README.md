@@ -72,6 +72,14 @@ worth stating:
 Every gap and type size comes from one ratio, φ = 1.618, declared as custom
 properties at the top of the stylesheet. Change `--phi-4` and the page rescales.
 
+Where a gap flexes it flexes between two rungs of that ladder and never outside
+them, and vertical space is keyed to the viewport's height while horizontal space
+is keyed to its width. That sounds obvious and was originally wrong: the outer
+padding was `6vw` and `8vw`, so a wide monitor was handed 288px of margin for
+639px of content and pushed the footer off the bottom of a laptop. On a 1920x1080
+screen the whole page now fits without a scrollbar, and down to a 672px viewport
+the preview square and the gaps give way before the page starts scrolling.
+
 ### Type
 
 Two ladders, because the page is half prose and half control panel. Prose runs
